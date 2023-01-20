@@ -1,7 +1,9 @@
 import numpy as np
+import scipy.io.wavfile as wavfile
 from scipy.fftpack import fft
 import pyaudio
 import tkinter as tk
+import math
 
 class TunerApp(tk.Tk):
     def __init__(self):
@@ -18,39 +20,52 @@ class TunerApp(tk.Tk):
             frames_per_buffer=self.chunk
         )
 
-        self.note_label = tk.Label(self, text="Tuning...")
+        self.note_label = tk.Label(self, text="Note: N/A")
         self.note_label.pack()
 
-        self.frequency_label = tk.Label(self, text="Frequency:")
-        self.frequency_label.pack()
+        self.tuning_label = tk.Label(self, text="Tuning...")
+        self.tuning_label.pack()
+
+        self.create_needle()
 
         self.update()
+
+    def create_needle(self):
+        self.needle = tk.Canvas(self, width=200, height=200)
+        self.needle.pack()
+        self.needle.create_line(100, 100, 120, 100, arrow=tk.LAST)
 
     def update(self):
         data = np.fromstring(self.stream.read(self.chunk), dtype=np.int16)
         fft_data = np.abs(fft(data))[:self.chunk//2]
         peak_frequency = np.argmax(fft_data) * self.sample_rate / self.chunk
-        self.frequency_label.config(text="Frequency: {:.2f}Hz".format(peak_frequency))
+        self.tuning_label.config(text="Frequency: {:.2f}Hz".format(peak_frequency))
 
-        note, error = self.note_from_frequency(peak_frequency)
-        self.note_label.config(text="Note: {} (error: {:.2f} cents)".format(note, error))
+        note, deviation = self.get_note(peak_frequency)
+        self.note_label.config(text="Note: {} ({:.2f} cents)".format(note, deviation))
+        self.rotate_needle(deviation)
+
         self.after(50, self.update)
 
-    def note_from_frequency(self, frequency):
+    def get_note(self, frequency):
         """
         Returns the nearest note, the error (in cents) and the string
         for a given frequency.
         """
         note_frequencies = {'E2': 82.41, 'A2': 110.00, 'D3': 146.83, 'G3': 196.00, 'B3': 246.94, 'E4': 329.63}
-        error = 1000000
+        deviation = 1000000
         note = ""
         for i, freq in note_frequencies.items():
-            if abs(frequency - freq) < error:
-                error = abs(frequency - freq)
+            if abs(frequency - freq) < deviation:
+                deviation = abs(frequency - freq)
                 note = i
-        error = error / freq * 1200
-        return note, error
+        deviation = deviation / freq * 1200
+        return note, deviation
 
+    def rotate_needle(self, deviation):
+        angle = math.radians(deviation)
+        self.needle.delete("all")
+        self.needle.create_line(100, 100, 100 + math.sin(angle) * 80, 100 - math.cos(angle) * 80, arrow=tk.LAST)
 
 if __name__ == "__main__":
     app = TunerApp()
