@@ -38,19 +38,19 @@ class TunerApp(tk.Tk):
 
     def note_from_frequency(self, frequency):
         """
-        Returns the nearest note and the error (in cents)
+        Returns the nearest note, the error (in cents) and the string
         for a given frequency.
         """
-        notes = ["E", "F", "F#", "G", "G#", "A", "A#", "B", "C", "C#", "D", "D#"]
-        note_frequencies = [82.41, 87.31, 92.50, 98.00, 103.83, 110.00, 116.54, 123.47, 130.81, 138.59, 146.83, 155.56]
+        note_frequencies = {'E2': 82.41, 'A2': 110.00, 'D3': 146.83, 'G3': 196.00, 'B3': 246.94, 'E4': 329.63}
         error = 1000000
         note = ""
-        for i, freq in enumerate(note_frequencies):
+        for i, freq in note_frequencies.items():
             if abs(frequency - freq) < error:
                 error = abs(frequency - freq)
-                note = notes[i]
+                note = i
         error = error / freq * 1200
         return note, error
+
 
 if __name__ == "__main__":
     app = TunerApp()
