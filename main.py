@@ -1,12 +1,61 @@
-import tkinter as tk
-from tkinter import ttk
-import math
+'''
+Guitar tuner script based on the Harmonic Product Spectrum (HPS)
+
+MIT License
+Copyright (c) 2021 chciken
+'''
+
 import copy
 import os
 import numpy as np
 import scipy.fftpack
 import sounddevice as sd
 import time
+
+import tkinter as tk
+from tkinter import ttk
+import math
+
+
+class App(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Guitar Tuner")
+        self.geometry("400x200")
+        self.closest_note = tk.StringVar()
+        self.max_freq = tk.StringVar()
+        self.closest_pitch = tk.StringVar()
+        self.arrow_angle = tk.IntVar()
+        self.arrow_angle.set(0)
+
+        self.note_label = ttk.Label(self, textvariable=self.closest_note)
+        self.note_label.pack()
+
+        self.freq_label = ttk.Label(self, textvariable=self.max_freq)
+        self.freq_label.pack()
+
+        self.pitch_label = ttk.Label(self, textvariable=self.closest_pitch)
+        self.pitch_label.pack()
+
+        self.canvas = tk.Canvas(self, width=150, height=150)
+        self.canvas.pack()
+
+        self.line = self.canvas.create_line(75, 75, 75, 25, width=2)
+
+
+    def update_labels(self, closest_note, max_freq, closest_pitch):
+        self.closest_note.set(closest_note)
+        self.max_freq.set(max_freq)
+        self.closest_pitch.set(closest_pitch)
+
+
+    def update_arrow(self, angle):
+        self.canvas.delete(self.line)
+        x1, y1, x2, y2 = 75, 75, 75 + 50 * math.sin(math.radians(angle)), 75 - 50 * math.cos(math.radians(angle))
+        self.line = self.canvas.create_line(x1, y1, x2, y2, width=2)
+
+
+
 
 # General settings that can be changed by the user
 SAMPLE_FREQ = 48000 # sample frequency in Hz
@@ -37,105 +86,92 @@ def find_closest_note(pitch):
   closest_pitch = CONCERT_PITCH*2**(i/12)
   return closest_note, closest_pitch
 
-class App(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Guitar Tuner")
-        self.geometry("400x200")
-        self.closest_note = tk.StringVar()
-        self.max_freq = tk.StringVar()
-        self.closest_pitch = tk.StringVar()
-        self.arrow_angle = tk.IntVar()
-        self.arrow_angle.set(0)
-
-        self.note_label = ttk.Label(self, textvariable=self.closest_note)
-        self.note_label.pack()
-
-        self.freq_label = ttk.Label(self, textvariable=self.max_freq)
-        self.freq_label.pack()
-
-        self.pitch_label = ttk.Label(self, textvariable=self.closest_pitch)
-        self.pitch_label.pack()
-
-        self.canvas = tk.Canvas(self, width=150, height=150)
-        self.canvas.pack()
-
-        self.line = self.canvas.create_line(75, 75, 75, 25, width=2)
-
-    def update_labels(self, closest_note, max_freq, closest_pitch):
-        self.closest_note.set(closest_note)
-        self.max_freq.set(max_freq)
-        self.closest_pitch.set(closest_pitch)
-
-    def update_arrow(self, angle):
-        self.canvas.delete(self.line)
-        x1, y1, x2, y2 = 75, 75, 75 + 50 * math.sin(math.radians(angle)), 75 - 50 * math.cos(math.radians(angle))
-        self.line = self.canvas.create_line(x1, y1, x2, y2, width=2)
-
 HANN_WINDOW = np.hanning(WINDOW_SIZE)
 def callback(indata, frames, time, status):
-    """
+  """
   Callback function of the InputStream method.
   That's where the magic happens ;)
   """
-    # define static variables
-    if not hasattr(callback, "window_samples"):
-        callback.window_samples = [0 for _ in range(WINDOW_SIZE)]
-    if not hasattr(callback, "noteBuffer"):
-        callback.noteBuffer = ["1", "2"]
-    if not hasattr(callback, "app"):
-        callback.app = App()
+  # define static variables
+  if not hasattr(callback, "window_samples"):
+    callback.window_samples = [0 for _ in range(WINDOW_SIZE)]
+  if not hasattr(callback, "noteBuffer"):
+    callback.noteBuffer = ["1","2"]
 
-    if status:
-        print(status)
-        return
-    if np.any(indata):
-        callback.window_samples = np.concatenate((callback.window_samples, indata[:, 0]))  # append new samples
-        callback.window_samples = callback.window_samples[len(indata[:, 0]):]  # remove old samples
+  if status:
+    print(status)
+    return
+  if any(indata):
+    callback.window_samples = np.concatenate((callback.window_samples, indata[:, 0])) # append new samples
+    callback.window_samples = callback.window_samples[len(indata[:, 0]):] # remove old samples
 
-        # skip if signal power is too low
-        signal_power = (np.linalg.norm(callback.window_samples, ord=2)**2) / len(callback.window_samples)
-        if signal_power < POWER_THRESH:
-          callback.app.update_labels("...", "...", "...")
-          callback.app.update_arrow(0)
-          return
-        # avoid spectral leakage by multiplying the signal with a hann window
-        hann_samples = callback.window_samples * HANN_WINDOW
-        magnitude_spec = abs(scipy.fftpack.fft(hann_samples)[:len(hann_samples) // 2])
+    # skip if signal power is too low
+    signal_power = (np.linalg.norm(callback.window_samples, ord=2)**2) / len(callback.window_samples)
+    if signal_power < POWER_THRESH:
+      os.system('cls' if os.name=='nt' else 'clear')
+      print("Closest note: ...")
+      return
 
-        # supress mains hum, set everything below 62Hz to zero
-        magnitude_spec[:31] = 0
+    # avoid spectral leakage by multiplying the signal with a hann window
+    hann_samples = callback.window_samples * HANN_WINDOW
+    magnitude_spec = abs(scipy.fftpack.fft(hann_samples)[:len(hann_samples)//2])
 
-        # create harmonic product spectrums
-        hps = np.zeros(len(magnitude_spec))
-        hps += magnitude_spec
-        for i in range(2, NUM_HPS + 1):
-            hps += np.interp(i * magnitude_spec.shape[0], np.arange(magnitude_spec.shape[0]), magnitude_spec)
+    # supress mains hum, set everything below 62Hz to zero
+    for i in range(int(62/DELTA_FREQ)):
+      magnitude_spec[i] = 0
 
-        # set everything under WHITE_NOISE_THRESH*avg_energy_per_freq to zero
-        avg_energy_per_freq = (np.sum(hps) / hps.shape[0]) * WHITE_NOISE_THRESH
-        hps[hps < avg_energy_per_freq] = 0
+    # calculate average energy per frequency for the octave bands
+    # and suppress everything below it
+    for j in range(len(OCTAVE_BANDS)-1):
+      ind_start = int(OCTAVE_BANDS[j]/DELTA_FREQ)
+      ind_end = int(OCTAVE_BANDS[j+1]/DELTA_FREQ)
+      ind_end = ind_end if len(magnitude_spec) > ind_end else len(magnitude_spec)
+      avg_energy_per_freq = (np.linalg.norm(magnitude_spec[ind_start:ind_end], ord=2)**2) / (ind_end-ind_start)
+      avg_energy_per_freq = avg_energy_per_freq**0.5
+      for i in range(ind_start, ind_end):
+        magnitude_spec[i] = magnitude_spec[i] if magnitude_spec[i] > WHITE_NOISE_THRESH*avg_energy_per_freq else 0
 
-        # find maximum frequency
-        max_index = np.argmax(hps)
-        max_freq = max_index * DELTA_FREQ
-        closest_note, closest_pitch = find_closest_note(max_freq)
+    # interpolate spectrum
+    mag_spec_ipol = np.interp(np.arange(0, len(magnitude_spec), 1/NUM_HPS), np.arange(0, len(magnitude_spec)),
+                              magnitude_spec)
+    mag_spec_ipol = mag_spec_ipol / np.linalg.norm(mag_spec_ipol, ord=2) #normalize it
 
-        callback.app.update_labels(closest_note, max_freq, closest_pitch)
-        # you can use the max_freq and closest_pitch values to calculate the angle of the arrow
-        angle = calculate_angle(max_freq, closest_pitch)
-        callback.app.update_arrow(angle)
+    hps_spec = copy.deepcopy(mag_spec_ipol)
 
+    # calculate the HPS
+    for i in range(NUM_HPS):
+      tmp_hps_spec = np.multiply(hps_spec[:int(np.ceil(len(mag_spec_ipol)/(i+1)))], mag_spec_ipol[::(i+1)])
+      if not any(tmp_hps_spec):
+        break
+      hps_spec = tmp_hps_spec
 
-def calculate_angle(max_freq, closest_pitch):
-    diff = abs(max_freq - closest_pitch)
-    angle = 90 - (diff / closest_pitch) * 90
-    return angle
+    max_ind = np.argmax(hps_spec)
+    max_freq = max_ind * (SAMPLE_FREQ/WINDOW_SIZE) / NUM_HPS
 
+    closest_note, closest_pitch = find_closest_note(max_freq)
+    max_freq = round(max_freq, 1)
+    closest_pitch = round(closest_pitch, 1)
 
-if __name__ == "__main__":
+    callback.noteBuffer.insert(0, closest_note) # note that this is a ringbuffer
+    callback.noteBuffer.pop()
+
+    os.system('cls' if os.name=='nt' else 'clear')
+    if callback.noteBuffer.count(callback.noteBuffer[0]) == len(callback.noteBuffer):
+      print(f"Closest note: {closest_note} {max_freq}/{closest_pitch}")
+      #App.update_labels(callback.noteBuffer[0])
+    else:
+      print(f"Closest note: ...")
+
+  else:
+    print('no input')
+
+try:
+  print("Starting HPS guitar tuner...")
+  with sd.InputStream(channels=1, callback=callback, blocksize=WINDOW_STEP, samplerate=SAMPLE_FREQ):
     app = App()
-
-    stream = sd.InputStream(channels=1, callback=callback, blocksize=WINDOW_STEP, samplerate=SAMPLE_FREQ)
-    stream.start()
     app.mainloop()
+    App.update_labels("1")
+    while True:
+      time.sleep(0.5)
+except Exception as exc:
+  print(str(exc))
