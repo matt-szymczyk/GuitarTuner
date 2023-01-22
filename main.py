@@ -4,6 +4,7 @@ import numpy as np
 import scipy.fftpack
 import sounddevice as sd
 import time
+import math
 import tkinter as tk
 
 SAMPLE_FREQ = 48000 # sample frequency in Hz
@@ -28,6 +29,7 @@ class TunerApp:
     def __init__(self, master):
         self.master = master
         master.title("Guitar Tuner")
+        master.geometry("300x300")
 
         self.closest_note_label = tk.Label(master, text="Closest note:")
         self.closest_note_label.pack()
@@ -53,19 +55,57 @@ class TunerApp:
         self.closest_pitch_display = tk.Label(master, textvariable=self.closest_pitch_var)
         self.closest_pitch_display.pack()
 
+        #create canvas
+        self.canvas = tk.Canvas(master, width=150, height=150)
+        self.canvas.pack()
+
+        self.line = self.canvas.create_line(75, 75, 75, 25, fill="red")
+
         self.window_samples = [0 for _ in range(WINDOW_SIZE)]
         self.noteBuffer = ["1", "2"]
-        # self.start_button = tk.Button(master, text="Start", command=self.start)
-        # self.start_button.pack()
-        #
-        # self.stop_button = tk.Button(master, text="Stop", command=self.stop)
-        # self.stop_button.pack()
+        self.start_button = tk.Button(master, text="Start", command=self.start)
+        self.start_button.pack()
+
+        self.stop_button = tk.Button(master, text="Stop", command=self.stop)
+        self.stop_button.pack()
 
 
-        self.stream = sd.InputStream(channels=1, callback=self.callback, samplerate=SAMPLE_FREQ)
+        self.stream = sd.InputStream(channels=1, callback=self.callback, blocksize=WINDOW_STEP, samplerate=SAMPLE_FREQ)
 
+    def note_to_pitch(self, note):
+        """
+        This function finds the pitch of a given note
+        Parameters:
+            note (str): note given in format "A2" or "G#2"
+        Returns:
+            pitch (float): pitch of the note in hertz
+        """
+        # Split the input string into note name and octave
+        note_name = note[:-1]
+        octave = int(note[-1])
 
+        # Get the index of the note in ALL_NOTES
+        note_index = ALL_NOTES.index(note_name)
 
+        # Calculate the number of semitones above A1
+        semitones_above_a1 = 12 * (octave - 1) + note_index
+
+        # Calculate the pitch
+        pitch = CONCERT_PITCH * 2 ** (semitones_above_a1 / 12)
+
+        return pitch
+
+    def update_arrow(self, angle):
+        self.canvas.delete(self.line)
+        x1, y1, x2, y2 = 75, 75, 75 + 50 * math.sin(math.radians(angle)), 75 - 50 * math.cos(math.radians(angle))
+        self.line = self.canvas.create_line(x1, y1, x2, y2, width=2)
+
+    def calculate_angle(self, max_freq, closest_pitch):
+        diff = max_freq - closest_pitch
+        angle = (diff / closest_pitch) * 1800
+        print(angle)
+        angle = min(180, max(0, angle))
+        return angle
     def find_closest_note(self, pitch):
         """
         This function finds the closest note for a given pitch
@@ -78,8 +118,7 @@ class TunerApp:
         i = int(np.round(np.log2(pitch / CONCERT_PITCH) * 12))
         closest_note = ALL_NOTES[i % 12] + str(4 + (i + 9) // 12)
         closest_pitch = CONCERT_PITCH * 2 ** (i / 12)
-        self.closest_note_var.set(closest_note)
-        self.closest_pitch_var.set(closest_pitch)
+
         return closest_note, closest_pitch
 
     def callback(self, indata, frames, time, status):
@@ -150,8 +189,13 @@ class TunerApp:
 
             closest_note, closest_pitch = self.find_closest_note(max_freq)
             max_freq = round(max_freq, 1)
-            self.max_freq_var.set(max_freq)
             closest_pitch = round(closest_pitch, 1)
+
+            self.max_freq_var.set(max_freq)
+            self.closest_note_var.set(closest_note)
+            self.closest_pitch_var.set(closest_pitch)
+
+            self.update_arrow(self.calculate_angle(max_freq, closest_pitch))
 
             self.noteBuffer.insert(0, closest_note)  # note that this is a ringbuffer
             self.noteBuffer.pop()
@@ -179,8 +223,8 @@ class TunerApp:
         Stop the audio stream
         """
         self.stream.stop()
-        self.stream.close()
-        self.stream = None
+        # self.stream.close()
+        # self.stream = None
 
 if __name__ == "__main__":
     root = tk.Tk()
