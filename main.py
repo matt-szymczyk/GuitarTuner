@@ -1,9 +1,7 @@
 import copy
-import os
 import numpy as np
 import scipy.fftpack
 import sounddevice as sd
-import time
 import math
 import tkinter as tk
 import customtkinter as ctk
@@ -123,30 +121,28 @@ class TunerApp:
         self.master.geometry(f"300x{int(500 * new_scaling_float)}")
         self.master.geometry(f"{int(300 * new_scaling_float)}x{int(500 * new_scaling_float)}")
 
-
-
-    def note_to_pitch(self, note):
-        """
-        This function finds the pitch of a given note
-        Parameters:
-            note (str): note given in format "A2" or "G#2"
-        Returns:
-            pitch (float): pitch of the note in hertz
-        """
-        # Split the input string into note name and octave
-        note_name = note[:-1]
-        octave = int(note[-1])
-
-        # Get the index of the note in ALL_NOTES
-        note_index = ALL_NOTES.index(note_name)
-
-        # Calculate the number of semitones above A1
-        semitones_above_a1 = 12 * (octave - 1) + note_index
-
-        # Calculate the pitch
-        pitch = CONCERT_PITCH * 2 ** (semitones_above_a1 / 12)
-
-        return pitch
+    # def note_to_pitch(self, note):
+    #     """
+    #     This function finds the pitch of a given note
+    #     Parameters:
+    #         note (str): note given in format "A2" or "G#2"
+    #     Returns:
+    #         pitch (float): pitch of the note in hertz
+    #     """
+    #     # Split the input string into note name and octave
+    #     note_name = note[:-1]
+    #     octave = int(note[-1])
+    #
+    #     # Get the index of the note in ALL_NOTES
+    #     note_index = ALL_NOTES.index(note_name)
+    #
+    #     # Calculate the number of semitones above A1
+    #     semitones_above_a1 = 12 * (octave - 1) + note_index
+    #
+    #     # Calculate the pitch
+    #     pitch = CONCERT_PITCH * 2 ** (semitones_above_a1 / 12)
+    #
+    #     return pitch
 
     def update_arrow(self, angle):
         self.canvas.delete(self.line)
@@ -157,7 +153,7 @@ class TunerApp:
     def calculate_angle(self, max_freq, closest_pitch):
         diff = max_freq - closest_pitch
         angle = (diff / closest_pitch) * 1800
-        print(angle)
+        # print(angle)
         angle = min(90, max(-90, angle))
         return angle
 
@@ -198,8 +194,7 @@ class TunerApp:
             signal_power = (np.linalg.norm(self.window_samples, ord=2, axis=0) ** 2) / len(
                 self.window_samples)
             if signal_power < POWER_THRESH:
-                os.system('cls' if os.name == 'nt' else 'clear')
-                print("Closest note: ...")
+                # print("Closest note: ...")
                 return
 
             # avoid spectral leakage by multiplying the signal with a hann window
@@ -255,12 +250,6 @@ class TunerApp:
             self.noteBuffer.insert(0, closest_note)  # note that this is a ringbuffer
             self.noteBuffer.pop()
 
-            os.system('cls' if os.name == 'nt' else 'clear')
-            if self.noteBuffer.count(self.noteBuffer[0]) == len(self.noteBuffer):
-                print(f"Closest note: {closest_note} {max_freq}/{closest_pitch}")
-            else:
-                print(f"Closest note: ...")
-
         else:
             print('no input')
 
@@ -276,8 +265,6 @@ class TunerApp:
         Stop the audio stream
         """
         self.stream.stop()
-        # self.stream.close()
-        # self.stream = None
 
 
 if __name__ == "__main__":
