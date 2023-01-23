@@ -1,3 +1,5 @@
 scipy
 pyaudio
 numpy
+sounddevice
+customtkinter

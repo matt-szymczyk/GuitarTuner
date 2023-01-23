@@ -66,17 +66,8 @@ class TunerApp:
         # Closest note value
         self.closest_note_var = tk.StringVar()
         self.closest_note_var.set("...")
-        self.closest_note_display = ctk.CTkLabel(self.tuner_tab, textvariable=self.closest_note_var)
+        self.closest_note_display = ctk.CTkLabel(self.tuner_tab, textvariable=self.closest_note_var, font=("Helvetica", 20))
         self.closest_note_display.pack()
-
-        # Max frequency label
-        self.max_freq_label = ctk.CTkLabel(self.tuner_tab, text="Max frequency:")
-        self.max_freq_label.pack()
-        # Max frequency value
-        self.max_freq_var = tk.StringVar()
-        self.max_freq_var.set("...")
-        self.max_freq_display = ctk.CTkLabel(self.tuner_tab, textvariable=self.max_freq_var)
-        self.max_freq_display.pack()
 
         # Pitch detection
         self.closest_pitch_label = ctk.CTkLabel(self.tuner_tab, text="Closest pitch:")
@@ -86,6 +77,15 @@ class TunerApp:
         self.closest_pitch_var.set("...")
         self.closest_pitch_display = ctk.CTkLabel(self.tuner_tab, textvariable=self.closest_pitch_var)
         self.closest_pitch_display.pack()
+
+        # Max frequency label
+        self.max_freq_label = ctk.CTkLabel(self.tuner_tab, text="Max frequency:")
+        self.max_freq_label.pack()
+        # Max frequency value
+        self.max_freq_var = tk.StringVar()
+        self.max_freq_var.set("...")
+        self.max_freq_display = ctk.CTkLabel(self.tuner_tab, textvariable=self.max_freq_var)
+        self.max_freq_display.pack()
 
         # create canvas
         self.canvas = tk.Canvas(self.tuner_tab, width=150, height=150, bg="black")
@@ -121,28 +121,28 @@ class TunerApp:
         self.master.geometry(f"300x{int(500 * new_scaling_float)}")
         self.master.geometry(f"{int(300 * new_scaling_float)}x{int(500 * new_scaling_float)}")
 
-    # def note_to_pitch(self, note):
-    #     """
-    #     This function finds the pitch of a given note
-    #     Parameters:
-    #         note (str): note given in format "A2" or "G#2"
-    #     Returns:
-    #         pitch (float): pitch of the note in hertz
-    #     """
-    #     # Split the input string into note name and octave
-    #     note_name = note[:-1]
-    #     octave = int(note[-1])
-    #
-    #     # Get the index of the note in ALL_NOTES
-    #     note_index = ALL_NOTES.index(note_name)
-    #
-    #     # Calculate the number of semitones above A1
-    #     semitones_above_a1 = 12 * (octave - 1) + note_index
-    #
-    #     # Calculate the pitch
-    #     pitch = CONCERT_PITCH * 2 ** (semitones_above_a1 / 12)
-    #
-    #     return pitch
+    def note_to_pitch(self, note):
+        """
+        This function finds the pitch of a given note
+        Parameters:
+            note (str): note given in format "A2" or "G#2"
+        Returns:
+            pitch (float): pitch of the note in hertz
+        """
+        # Split the input string into note name and octave
+        note_name = note[:-1]
+        octave = int(note[-1])
+
+        # Get the index of the note in ALL_NOTES
+        note_index = ALL_NOTES.index(note_name)
+
+        # Calculate the number of semitones above A1
+        semitones_above_a1 = 12 * (octave - 1) + note_index
+
+        # Calculate the pitch
+        pitch = CONCERT_PITCH * 2 ** (semitones_above_a1 / 12)
+
+        return pitch
 
     def update_arrow(self, angle):
         self.canvas.delete(self.line)
