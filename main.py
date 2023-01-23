@@ -45,20 +45,20 @@ class TunerApp:
         self.tabview.set("Tuner")
         self.tabview.pack(padx=20, pady=20)
 
-        self.scaling_label = ctk.CTkLabel(self.settings_tab, text="Theme:", anchor="w")
-        self.scaling_label.grid(row=0, column=0, padx=(0, 20), pady=(0, 20), sticky="nsew")
+        self.appearance_mode_label = ctk.CTkLabel(self.settings_tab, text="Theme:", anchor="w")
+        self.appearance_mode_label.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.appearance_mode_optionemenu = ctk.CTkOptionMenu(self.settings_tab,
                                                              values=["System", "Light", "Dark"],
                                                              command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=0, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.appearance_mode_optionemenu.grid(row=1, column=0, padx=(20, 0), pady=(0, 0), sticky="nsew")
         self.appearance_mode_optionemenu.set("System")
 
         self.scaling_label = ctk.CTkLabel(self.settings_tab, text="UI Scaling:", anchor="w")
-        self.scaling_label.grid(row=1, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.scaling_label.grid(row=2, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
         self.scaling_optionemenu = ctk.CTkOptionMenu(self.settings_tab,
                                                      values=["75%", "100%", "125%", "150%", "175%", "200%"],
                                                      command=self.change_scaling_event)
-        self.scaling_optionemenu.grid(row=1, column=0, padx=(20, 0), pady=(20, 0), sticky="nsew")
+        self.scaling_optionemenu.grid(row=3, column=0, padx=(20, 0), pady=(0, 0), sticky="nsew")
         self.scaling_optionemenu.set("100%")
         self.scale_factor = 1
 
@@ -158,7 +158,7 @@ class TunerApp:
         diff = max_freq - closest_pitch
         angle = (diff / closest_pitch) * 1800
         print(angle)
-        angle = min(180, max(0, angle))
+        angle = min(90, max(-90, angle))
         return angle
 
     def find_closest_note(self, pitch):
