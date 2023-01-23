@@ -89,7 +89,7 @@ class TunerApp:
 
         # create canvas
         self.canvas = tk.Canvas(self.tuner_tab, width=150, height=150, bg="black")
-        self.canvas.pack()
+        self.canvas.pack(padx=(20, 20), pady=(20, 20))
 
         # create arrow
         self.line = self.canvas.create_line(75, 75, 75, 25, width=2, fill="red")
